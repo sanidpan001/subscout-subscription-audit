@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SubScout — Subscription Audit Dashboard & Savings Calculator</title>
+<meta name="description" content="SubScout is a free subscription audit calculator: add your subscriptions, get Keep/Kill/Maybe verdicts, a 0–100 health score, annual-vs-monthly billing optimizer, price-hike creep tracking, and 5-year savings projections — all in your browser.">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: { ink:'#0B0F1A', card:'#111827', edge:'#1F2937', cyanx:'#22D3EE', pinkx:'#F472B6' },
+    fontFamily: { disp:['"Space Grotesk"','ui-sans-serif','system-ui','sans-serif'] }
+  }}
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { background:#0B0F1A; color:#E5E7EB; font-family:'Space Grotesk',ui-sans-serif,system-ui,sans-serif; }
+  .glass { background:linear-gradient(160deg,#131A2B 0%,#0E1424 100%); border:1px solid #22304a; }
+  .verdict-Keep  { border-left:4px solid #22D3EE; }
+  .verdict-Maybe { border-left:4px solid #F472B6; }
+  .verdict-Kill  { border-left:4px solid #EF4444; }
+  .badge-Keep  { background:rgba(34,211,238,.14); color:#22D3EE; border:1px solid rgba(34,211,238,.4); }
+  .badge-Maybe { background:rgba(244,114,182,.14); color:#F472B6; border:1px solid rgba(244,114,182,.4); }
+  .badge-Kill  { background:rgba(239,68,68,.14); color:#F87171; border:1px solid rgba(239,68,68,.4); }
+  .score-track { background:#1F2937; }
+  details.faq summary { cursor:pointer; }
+  details.faq summary::-webkit-details-marker { display:none; }
+  details.faq[open] .faq-plus { transform:rotate(45deg); }
+  .faq-plus { transition:transform .2s ease; }
+  .num-glow { text-shadow:0 0 24px rgba(34,211,238,.45); }
+  input, select { color-scheme: dark; }
+  @media (max-width:640px){ .stat-num{ font-size:1.35rem; } }
+</style>
+</head>
+<body id="top" class="min-h-screen">
+
+<!-- ================= HEADER ================= -->
+<header class="sticky top-0 z-50 border-b border-edge/60" style="background:rgba(11,15,26,.92);backdrop-filter:blur(10px)">
+  <div class="mx-auto max-w-6xl px-4 sm:px-6 py-3 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl" style="background:linear-gradient(135deg,#22D3EE,#F472B6)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B0F1A" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="#0B0F1A"/></svg>
+      </span>
+      <span class="font-disp text-xl font-700 font-bold tracking-tight">Sub<span style="color:#22D3EE">Scout</span></span>
+    </a>
+    <nav class="flex items-center gap-5 text-sm">
+      <a href="#top" class="text-slate-300 hover:text-cyanx transition">Home</a>
+      <a href="https://fixoraa.tech" class="text-slate-300 hover:text-cyanx transition">More Tools</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section class="mx-auto max-w-6xl px-4 sm:px-6 pt-10 pb-2">
+  <div class="flex flex-wrap items-center gap-3 mb-4">
+    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" style="background:rgba(34,211,238,.12);color:#22D3EE;border:1px solid rgba(34,211,238,.35)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+      Unlimited Free Usage
+    </span>
+    <span class="text-xs text-slate-500">No signup · No paywall · 100% in your browser</span>
+  </div>
+  <h1 class="font-disp text-3xl sm:text-5xl font-bold tracking-tight leading-tight">
+    Subscription Audit <span style="background:linear-gradient(90deg,#22D3EE,#F472B6);-webkit-background-clip:text;background-clip:text;color:transparent">Dashboard</span>
+  </h1>
+  <p class="mt-3 max-w-2xl text-slate-400 text-sm sm:text-base">
+    Find out <em class="not-italic text-slate-200">how much you spend on subscriptions</em> every month and year. SubScout scores every subscription, delivers Keep&nbsp;/&nbsp;Kill&nbsp;/&nbsp;Maybe verdicts, and projects your 5-year savings if you cut the dead weight.
+  </p>
+</section>
+
+<!-- TOP AD (verbatim) -->
+<div class="no-print mx-auto max-w-6xl px-4 sm:px-6 pt-4" role="complementary" aria-label="Advertisement">
+  <div class="mx-auto text-center" style="max-width:728px">
+    <span class="block text-[10px] tracking-[0.18em] uppercase text-slate-400 mb-1.5">Advertisement</span>
+    <div class="flex justify-center overflow-hidden">
+      <div class="origin-top scale-[0.44] sm:scale-100 shrink-0">
+        <script>
+          atOptions = { 'key' : '4e68ac77881c17fe128a46565d9a4e8c', 'format' : 'iframe', 'height' : 90, 'width' : 728, 'params' : {} };
+        </script>
+        <script src="https://www.highrevenueformat.com/4e68ac77881c17fe128a46565d9a4e8c/invoke.js"></script>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TOOL ================= -->
+<main class="mx-auto max-w-6xl px-4 sm:px-6 py-8">
+
+  <!-- STATS ROW -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+    <div class="glass rounded-2xl p-4 sm:p-5">
+      <div class="text-[11px] uppercase tracking-[0.15em] text-slate-500 mb-1">Monthly burn</div>
+      <div id="stat-monthly" class="stat-num font-disp text-2xl sm:text-3xl font-bold num-glow" style="color:#22D3EE">$0.00</div>
+    </div>
+    <div class="glass rounded-2xl p-4 sm:p-5">
+      <div class="text-[11px] uppercase tracking-[0.15em] text-slate-500 mb-1">Yearly burn</div>
+      <div id="stat-yearly" class="stat-num font-disp text-2xl sm:text-3xl font-bold" style="color:#F472B6">$0.00</div>
+    </div>
+    <div class="glass rounded-2xl p-4 sm:p-5">
+      <div class="text-[11px] uppercase tracking-[0.15em] text-slate-500 mb-1">Active subs</div>
+      <div id="stat-count" class="stat-num font-disp text-2xl sm:text-3xl font-bold text-slate-100">0</div>
+    </div>
+    <div class="glass rounded-2xl p-4 sm:p-5">
+      <div class="text-[11px] uppercase tracking-[0.15em] text-slate-500 mb-1">5-yr savings if you cut</div>
+      <div id="savings-5yr" class="stat-num font-disp text-2xl sm:text-3xl font-bold text-emerald-400">$0.00</div>
+    </div>
+  </div>
+
+  <!-- HEALTH + FORM ROW -->
+  <div class="grid lg:grid-cols-5 gap-4 mb-6">
+    <!-- Health score -->
+    <div class="glass rounded-2xl p-5 lg:col-span-2">
+      <h2 class="font-disp text-lg font-semibold mb-3">Subscription Health</h2>
+      <div class="flex items-center gap-5">
+        <div class="relative shrink-0" style="width:120px;height:120px">
+          <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#1F2937" stroke-width="12"/>
+            <circle id="health-ring" cx="60" cy="60" r="52" fill="none" stroke="url(#hgrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:stroke-dashoffset .8s ease"/>
+            <defs><linearGradient id="hgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22D3EE"/><stop offset="1" stop-color="#F472B6"/></linearGradient></defs>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span id="health-score" class="font-disp text-3xl font-bold">–</span>
+            <span id="health-grade" class="text-xs text-slate-400">add subs</span>
+          </div>
+        </div>
+        <div class="text-sm text-slate-400 space-y-1.5">
+          <p id="health-note">Add your subscriptions to get a 0–100 health score.</p>
+          <p id="health-detail" class="text-xs"></p>
+        </div>
+      </div>
+      <div class="score-track mt-4 h-2.5 rounded-full overflow-hidden">
+        <div id="health-bar" class="h-full rounded-full" style="width:0%;background:linear-gradient(90deg,#22D3EE,#F472B6);transition:width .8s ease"></div>
+      </div>
+    </div>
+
+    <!-- Add form -->
+    <div class="glass rounded-2xl p-5 lg:col-span-3">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-disp text-lg font-semibold">Add a subscription</h2>
+        <button id="sample-btn" class="text-xs px-3 py-1.5 rounded-lg border border-edge text-slate-300 hover:border-cyanx hover:text-cyanx transition">Load samples</button>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <div>
+          <label for="sub-name" class="block text-xs text-slate-400 mb-1">Service name</label>
+          <input id="sub-name" type="text" placeholder="e.g. StreamFlix" class="w-full rounded-xl bg-ink border border-edge px-3 py-2.5 text-sm outline-none focus:border-cyanx">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="sub-cost" class="block text-xs text-slate-400 mb-1">Cost</label>
+            <input id="sub-cost" type="number" min="0" step="0.01" placeholder="12.99" class="w-full rounded-xl bg-ink border border-edge px-3 py-2.5 text-sm outline-none focus:border-cyanx">
+          </div>
+          <div>
+            <label for="sub-sym" class="block text-xs text-slate-400 mb-1">Currency</label>
+            <select id="sub-sym" class="w-full rounded-xl bg-ink border border-edge px-3 py-2.5 text-sm outline-none focus:border-cyanx">
+              <option value="$">$ USD</option><option value="€">€ EUR</option><option value="£">£ GBP</option><option value="₹">₹ INR</option><option value="¥">¥ JPY</option><option value="A$">A$ AUD</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label for="sub-cycle" class="block text-xs text-slate-400 mb-1">Billing cycle</label>
+          <select id="sub-cycle" class="w-full rounded-xl bg-ink border border-edge px-3 py-2.5 text-sm outline-none focus:border-cyanx">
+            <option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option>
+          </select>
+        </div>
+        <div>
+          <label for="sub-usage" class="block text-xs text-slate-400 mb-1">How often do you use it?</label>
+          <select id="sub-usage" class="w-full rounded-xl bg-ink border border-edge px-3 py-2.5 text-sm outline-none focus:border-cyanx">
+            <option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="rarely">Rarely / never</option>
+          </select>
+        </div>
+        <div class="sm:col-span-2">
+          <label for="sub-renewal" class="block text-xs text-slate-400 mb-1">Next renewal date (for the .ics reminder)</label>
+          <input id="sub-renewal" type="date" class="w-full rounded-xl bg-ink border border-edge px-3 py-2.5 text-sm outline-none focus:border-cyanx">
+        </div>
+      </div>
+      <p id="form-error" class="hidden text-xs text-red-400 mt-2"></p>
+      <button id="add-sub-btn" class="mt-4 w-full sm:w-auto px-6 py-2.5 rounded-xl font-semibold text-sm text-ink transition hover:opacity-90" style="background:linear-gradient(90deg,#22D3EE,#F472B6);color:#0B0F1A">Add subscription</button>
+    </div>
+  </div>
+
+  <!-- VERDICT CARDS -->
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-disp text-lg font-semibold">Keep / Kill / Maybe verdicts</h2>
+    <div class="flex gap-2 text-[11px]">
+      <span class="badge-Keep rounded-full px-2.5 py-0.5 font-semibold">Keep</span>
+      <span class="badge-Maybe rounded-full px-2.5 py-0.5 font-semibold">Maybe</span>
+      <span class="badge-Kill rounded-full px-2.5 py-0.5 font-semibold">Kill</span>
+    </div>
+  </div>
+  <div id="subs-list" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
+    <div class="glass rounded-2xl p-6 text-sm text-slate-500 md:col-span-2 xl:col-span-3" id="subs-empty">
+      No subscriptions yet. Add your first one above — the verdicts appear here instantly.
+    </div>
+  </div>
+
+  <!-- OPTIMIZER + CREEP -->
+  <div class="grid lg:grid-cols-2 gap-4 mb-4">
+    <!-- Billing optimizer -->
+    <div class="glass rounded-2xl p-5">
+      <h2 class="font-disp text-lg font-semibold mb-1">Annual vs Monthly optimizer</h2>
+      <p class="text-xs text-slate-500 mb-4">Many services quietly charge a premium for monthly billing. Enter both prices to see the true gap.</p>
+      <div>
+        <label for="opt-name" class="block text-xs text-slate-400 mb-1">Service name</label>
+        <input id="opt-name" type="text" placeholder="e.g. MusicBox" class="w-full rounded-xl bg-ink border border-edge px-3 py-2.5 text-sm outline-none focus:border-cyanx mb-3">
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label for="opt-monthly" class="block text-xs text-slate-400 mb-1">Monthly price</label>
+          <input id="opt-monthly" type="number" min="0" step="0.01" placeholder="9.99" class="w-full rounded-xl bg-ink border border-edge px-3 py-2.5 text-sm outline-none focus:border-cyanx">
+        </div>
+        <div>
+          <label for="opt-annual" class="block text-xs text-slate-400 mb-1">Annual price</label>
+          <input id="opt-annual" type="number" min="0" step="0.01" placeholder="99.99" class="w-full rounded-xl bg-ink border border-edge px-3 py-2.5 text-sm outline-none focus:border-cyanx">
+        </div>
+      </div>
+      <button id="opt-run" class="px-6 py-2.5 rounded-xl font-semibold text-sm transition hover:opacity-90" style="background:linear-gradient(90deg,#22D3EE,#F472B6);color:#0B0F1A">Compare cycles</button>
+      <div id="optimizer-result" class="mt-4 hidden rounded-xl border border-edge bg-ink/60 p-4 text-sm"></div>
+    </div>
+
+    <!-- Price-hike creep log -->
+    <div class="glass rounded-2xl p-5">
+      <h2 class="font-disp text-lg font-semibold mb-1">Price-hike creep log</h2>
+      <p class="text-xs text-slate-500 mb-4">Log every price increase a service hits you with. SubScout charts the creep and annualizes it.</p>
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div>
+          <label for="creep-name" class="block text-xs text-slate-400 mb-1">Service</label>
+          <input id="creep-name" type="text" placeholder="StreamFlix" class="w-full rounded-xl bg-ink border border-edge px-3 py-2.5 text-sm outline-none focus:border-cyanx">
+        </div>
+        <div>
+          <label for="creep-date" class="block text-xs text-slate-400 mb-1">Date</label>
+          <input id="creep-date" type="date" class="w-full rounded-xl bg-ink border border-edge px-3 py-2.5 text-sm outline-none focus:border-cyanx">
+        </div>
+        <div>
+          <label for="creep-price" class="block text-xs text-slate-400 mb-1">New price</label>
+          <input id="creep-price" type="number" min="0" step="0.01" placeholder="15.49" class="w-full rounded-xl bg-ink border border-edge px-3 py-2.5 text-sm outline-none focus:border-cyanx">
+        </div>
+      </div>
+      <button id="creep-add" class="px-6 py-2.5 rounded-xl font-semibold text-sm transition hover:opacity-90" style="background:linear-gradient(90deg,#22D3EE,#F472B6);color:#0B0F1A">Log price</button>
+      <div class="mt-4">
+        <svg id="creep-chart" viewBox="0 0 300 90" class="w-full h-24 rounded-xl border border-edge bg-ink/60" aria-label="Price creep chart"></svg>
+        <p id="creep-stats" class="text-xs text-slate-400 mt-2">Log at least two prices to see the creep.</p>
+        <ul id="creep-list" class="mt-2 space-y-1.5 text-xs text-slate-400 max-h-36 overflow-y-auto"></ul>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- BOTTOM AD (verbatim) -->
+<div class="no-print mx-auto max-w-6xl px-4 sm:px-6 pb-4" role="complementary" aria-label="Advertisement">
+  <div class="mx-auto text-center" style="max-width:728px">
+    <span class="block text-[10px] tracking-[0.18em] uppercase text-slate-400 mb-1.5">Advertisement</span>
+    <div class="flex justify-center overflow-hidden">
+      <script async src="https://js.wpadmngr.com/static/adManager.js" data-admpid="464498"></script>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SEO ARTICLE ================= -->
+<article id="seo-article" class="mx-auto max-w-4xl px-4 sm:px-6 pb-10 text-slate-300 text-[15px] leading-7">
+  <h2 class="font-disp text-2xl sm:text-3xl font-bold text-slate-100 mb-5">The Complete Guide to Running a Subscription Audit (and Keeping the Savings)</h2>
+
+  <p>Subscriptions are the quietest line item in your budget. A streaming plan here, a cloud-storage plan there, a meditation app you opened twice in January, a software tool your old job used to pay for — each one feels small on its own. Together, they form a slow financial leak that most people never fully measure. The question <strong>"how much do I spend on subscriptions"</strong> sounds simple, but almost nobody can answer it without sitting down and listing every recurring charge. That is exactly what a subscription audit is for, and a good <strong>subscription audit calculator</strong> turns that painful detective work into a ten-minute exercise with a clear verdict at the end: keep it, kill it, or think about it.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-slate-100 mt-8 mb-3">What a subscription audit actually does</h3>
+  <p>A subscription audit is a structured review of every recurring payment leaving your accounts — monthly, quarterly, and yearly — with one goal: deciding whether each charge still earns its place. Unlike a generic budget review, an audit focuses on the peculiar psychology of subscriptions. They are designed to be forgotten. Free trials convert silently. Prices creep upward in small increments. Annual plans auto-renew while you are busy with something else. A proper <strong>subscription tracker with savings</strong> features does three things a spreadsheet cannot do as easily: it converts every billing cycle into a comparable monthly and yearly cost, it forces a usage honesty-check per service, and it projects the long-term damage of keeping each one. The last part matters most. A $12.99 monthly plan is not a $12.99 decision — it is a roughly $1,700 decision over ten years once you account for the price hikes that streaming and software companies reliably push through every couple of years.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-slate-100 mt-8 mb-3">How much do I spend on subscriptions? The honest math</h3>
+  <p>The average household in many countries now carries between six and twelve paid subscriptions, and surveys consistently find that people underestimate their total subscription spending by a wide margin — often by half or more. The reason is not carelessness; it is fragmentation. Charges arrive on different cards, in different currencies, on different cycles. A yearly antivirus renewal feels like a one-off, not a subscription. A quarterly domain registration slips past the monthly mental budget entirely. To answer <strong>"how much do I spend on subscriptions"</strong> accurately, you need to normalize everything to a single time window: convert weekly plans to monthly (multiply by 52, divide by 12), quarterly plans to monthly (divide by 3), and yearly plans to monthly (divide by 12). Then add them up. That single number — your monthly subscription burn — is the foundation of the audit. The yearly total is the number that usually produces the gasp, because twelve months of "it is only ten bucks" is suddenly a four-figure sum.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-slate-100 mt-8 mb-3">The Keep / Kill / Maybe verdict system</h3>
+  <p>Every subscription in a serious audit gets a verdict, and three buckets are enough. <strong>Keep</strong> is for services you use heavily relative to their cost — daily-use tools, the one streaming service your whole family actually watches, the cloud plan holding your business files. <strong>Kill</strong> is for the zombies: trials that converted, apps you have not opened in months, duplicate services (two music apps, three cloud drives), and anything whose cost-per-use has become absurd. <strong>Maybe</strong> is the honest middle ground — the seasonal service you binge for two months a year, the niche tool you use for one project each quarter. Maybe items are where the real savings hide, because they invite smarter tactics: pause instead of cancel, switch to seasonal activation, downgrade a tier, or share a family plan. A quality <strong>subscription audit calculator</strong> scores each subscription on usage frequency, price tier, and cost-per-use so the verdicts are consistent instead of vibes-based. The scoring in SubScout, for example, weights daily use heavily, penalizes high monthly prices, and penalizes a high cost-per-use — so a $3 monthly app you open daily can outscore a $20 monthly service you touch once a month.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-slate-100 mt-8 mb-3">The subscription health score: one number for the whole mess</h3>
+  <p>Once every subscription has a verdict, you need one number that summarizes the entire picture. That is the subscription health score: a 0–100 rating where 100 means every dollar of recurring spend goes to services you genuinely use, and low scores mean a large share of your money feeds Kill-verdict zombies. The score should reflect three things. First, the share of your monthly spend sitting in Kill verdicts — this is the biggest drag on the score, because it is pure waste. Second, the share in Maybe verdicts, which is a smaller drag but signals inefficiency. Third, subscription count itself: beyond a handful of services, each additional subscription adds management overhead, renewal risk, and price-hike exposure, so a lean stack scores better than a sprawling one even at equal spend. Think of the health score the way you think of a credit score — not as a judgment, but as a single dial to improve month over month. Re-run your audit quarterly and watch the number climb as you cancel, pause, and consolidate.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-slate-100 mt-8 mb-3">The annual-vs-monthly trap most people pay for</h3>
+  <p>Here is one of the least-discussed subscription rip-offs: monthly billing is frequently 15–25% more expensive per year than the annual plan for the exact same service, and companies rarely advertise the gap prominently. A $12.99 monthly plan costs $155.88 per year; the annual plan might be $119.99 — a $36 difference for identical access. The catch is psychological: monthly feels cheaper because the number is smaller, and it feels safer because canceling seems easier. For services with a firm Keep verdict — the ones you are certain to use all year — switching to annual billing is free money. For Maybe services, the math flips: annual plans are a trap if you will only use the service for three months, because the "discount" locks you into nine months of waste. The rule is simple and worth memorizing: annual billing for Keeps, monthly billing for Maybes you are testing, and cancellation for Kills. Run the numbers with an annual-vs-monthly billing optimizer before you commit, because some "annual discounts" are illusions — a few services price their annual plan above twelve months of the monthly rate, counting on customers not to multiply.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-slate-100 mt-8 mb-3">Price-hike creep: the silent budget killer</h3>
+  <p>Subscriptions do not stay the price you signed up at. Streaming services, software suites, and cloud providers raise prices every 18–36 months, usually by a dollar or two — small enough that you shrug, frequent enough that it compounds. A service that cost $9.99 in 2020, $12.99 in 2022, and $15.49 in 2024 has a creep rate of roughly 11% per year, far above general inflation. Nobody tracks this in their head, which is why a price-hike creep log is one of the most valuable features a <strong>subscription tracker with savings</strong> can offer. Log the date and price of every increase, and over time you get two powerful numbers: the total percentage increase since you subscribed, and the annualized creep rate. The annualized rate is the honest one — it lets you compare a service that raised prices twice in five years against one that raised once in two years. When a service's creep rate exceeds 8–10% per year, treat it as a re-audit trigger: the value equation you accepted at signup no longer exists, and the service deserves a fresh Keep-or-Kill verdict at its new price.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-slate-100 mt-8 mb-3">The 5-year savings projection: why small cancellations matter</h3>
+  <p>Humans discount the future aggressively. Saving $14.99 a month feels like pocket change, so canceling feels like a chore not worth the effort. The 5-year projection fixes this bias by showing the compounded truth. Kill-verdict subscriptions save 100% of their yearly cost, and Maybe-verdict services — assuming you cut half of them or halve their usage — save roughly half. Then apply a modest annual price-hike assumption, say 5%, because keeping a subscription means paying tomorrow's higher price, not today's. Under those assumptions, cutting $60/month of waste is not a $720 decision — it is a roughly $3,970 decision over five years. That is a vacation, an emergency fund top-up, or a serious dent in high-interest debt. The projection is what converts audit results into action, because it translates "meh, fourteen bucks" into a number your future self will thank you for.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-slate-100 mt-8 mb-3">How to run your audit with SubScout, step by step</h3>
+  <p>Start by listing everything. Pull twelve months of card and bank statements and hunt for recurring charges — including the yearly ones, which are the easiest to miss. Add each subscription to SubScout with its name, cost, billing cycle, and honest usage frequency. Be brutal about usage: "weekly" means you actually open it most weeks, not that you intend to. The dashboard instantly shows your monthly burn, yearly burn, and active count, and each subscription gets a Keep, Kill, or Maybe verdict with a 0–100 score and the reasoning behind it. Next, check your health score. If it is under 55, you have significant waste — start with the Kill verdicts, which are usually the easiest emotional decision because you already barely use them. Then work the Maybes: pause what can be paused, downgrade tiers, consolidate duplicates, and switch firm Keeps to annual billing using the optimizer to verify the discount is real. Set calendar reminders for every renewal date — the built-in .ics download makes this one click per subscription — so no annual plan ever auto-renews by surprise again. Finally, log every future price increase in the creep log. Re-run the full audit every quarter; it takes ten minutes once the list exists, and each run should show a higher health score and a bigger projected savings number.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-slate-100 mt-8 mb-3">Advanced tactics after your first audit</h3>
+  <p>Once the obvious kills are done, the second wave of savings comes from strategy. <strong>Seasonal rotation</strong> beats stacking for entertainment: subscribe to one streaming service at a time, binge, cancel, rotate. Most platforms now make canceling easy because they know you will be back — use that. <strong>Tier audits</strong> catch over-provisioning: the premium 4K tier nobody in the house can distinguish from the standard tier, the 2TB cloud plan holding 90GB of files, the business software seat count from when the team was bigger. <strong>Family and bundle consolidation</strong> turns three individual plans into one shared plan at half the per-person cost. <strong>Trial hygiene</strong> prevents future zombies: the moment you start a free trial, create the renewal reminder immediately, and prefer virtual-card or calendar-blocked trials where available. And watch for <strong>duplicate coverage</strong> — the most common audit finding is two services doing the same job, like a music app plus a video bundle that includes music, or two cloud drives syncing the same folders. None of these tactics require willpower; they require a system, and a system is exactly what a recurring audit gives you.</p>
+
+  <h3 class="font-disp text-xl font-semibold text-slate-100 mt-8 mb-3">Why a browser-based audit tool beats a spreadsheet</h3>
+  <p>Spreadsheets work, but they have a fatal flaw: the formulas live in your head, so every audit session starts from scratch and the math is inconsistent. A dedicated <strong>subscription audit calculator</strong> encodes the methodology — cycle normalization, cost-per-use scoring, verdict thresholds, health-score weighting, savings projection with price-hike assumptions — so every audit uses the same rules and the results are comparable over time. Browser-based tools add two more advantages: your data never leaves your device, which matters when you are typing in what you pay for things, and the friction of starting is near zero. The best audit is the one you actually repeat, and a tool that remembers your subscriptions, your creep log, and your renewal reminders between sessions turns a one-time purge into a quarterly habit. That habit is the entire game. Subscription waste is not a one-time problem; it is a recurring leak, and only a recurring process plugs it.</p>
+
+  <p class="mt-8 text-slate-400">Run your first audit today. List every subscription, face the yearly total, kill the zombies, optimize the keepers, and set the reminders. Your future self — the one with the higher health score and the five-year savings already compounding — will be glad you spent the ten minutes.</p>
+</article>
+
+<!-- ================= FAQS ================= -->
+<section class="mx-auto max-w-4xl px-4 sm:px-6 pb-12">
+  <h2 class="font-disp text-2xl font-bold text-slate-100 mb-5">Frequently asked questions</h2>
+  <div class="space-y-3">
+    <details class="faq glass rounded-2xl p-4">
+      <summary class="flex items-center justify-between font-medium text-slate-100">How does the subscription audit calculator decide Keep, Kill, or Maybe?<span class="faq-plus text-cyanx text-xl leading-none">+</span></summary>
+      <p class="mt-2 text-sm text-slate-400 leading-6">Each subscription is scored 0–100 from three inputs: how often you use it (daily use scores far higher than rare use), its monthly price tier, and its cost-per-use (monthly cost divided by uses per month). Scores of 65+ earn Keep, 40–64 earn Maybe, and below 40 earn Kill. Every verdict shows its reasoning so you can see exactly why a service landed where it did.</p>
+    </details>
+    <details class="faq glass rounded-2xl p-4">
+      <summary class="flex items-center justify-between font-medium text-slate-100">How do I figure out how much I spend on subscriptions per year?<span class="faq-plus text-cyanx text-xl leading-none">+</span></summary>
+      <p class="mt-2 text-sm text-slate-400 leading-6">Add every recurring charge with its true billing cycle — weekly, monthly, quarterly, or yearly. SubScout normalizes each one to monthly and yearly equivalents (for example, a weekly plan is multiplied by 52 to get the yearly cost) and totals them. The yearly total is the eye-opening number: it reveals the real cost of "it's only a few bucks a month" thinking.</p>
+    </details>
+    <details class="faq glass rounded-2xl p-4">
+      <summary class="flex items-center justify-between font-medium text-slate-100">Is annual billing always cheaper than monthly billing?<span class="faq-plus text-cyanx text-xl leading-none">+</span></summary>
+      <p class="mt-2 text-sm text-slate-400 leading-6">Not always. Many services discount annual plans 15–25% versus twelve months of monthly billing, but some price the annual plan at or even above the monthly-equivalent total. Use the annual-vs-monthly optimizer to compare both prices before committing — and only switch firm Keep verdicts to annual, since annual plans lock in services you might otherwise cancel.</p>
+    </details>
+    <details class="faq glass rounded-2xl p-4">
+      <summary class="flex items-center justify-between font-medium text-slate-100">What is subscription price-hike creep, and why track it?<span class="faq-plus text-cyanx text-xl leading-none">+</span></summary>
+      <p class="mt-2 text-sm text-slate-400 leading-6">Price-hike creep is the slow rise of a subscription's price through small periodic increases — a dollar here, two dollars there. Individually the hikes feel trivial, but they often compound at 8–12% per year, far above inflation. Logging each increase lets you see the total change and the annualized creep rate, which tells you when a service's value equation has changed enough to deserve a fresh audit.</p>
+    </details>
+    <details class="faq glass rounded-2xl p-4">
+      <summary class="flex items-center justify-between font-medium text-slate-100">How is the 5-year savings projection calculated?<span class="faq-plus text-cyanx text-xl leading-none">+</span></summary>
+      <p class="mt-2 text-sm text-slate-400 leading-6">Kill-verdict subscriptions contribute 100% of their yearly cost to the savings, and Maybe-verdict services contribute 50% (a conservative assumption that you cut or halve half of them). Each future year's savings grow by a 5% assumed price-hike rate, because keeping a subscription means paying tomorrow's higher prices. The total shows what the cuts are really worth over five years.</p>
+    </details>
+    <details class="faq glass rounded-2xl p-4">
+      <summary class="flex items-center justify-between font-medium text-slate-100">Is my subscription data private? Where is it stored?<span class="faq-plus text-cyanx text-xl leading-none">+</span></summary>
+      <p class="mt-2 text-sm text-slate-400 leading-6">Yes — everything stays in your browser. SubScout stores your subscriptions and creep log in your browser's localStorage and never sends them to any server; there is no account, no tracking, and no database. The .ics renewal reminders are generated on your device and downloaded directly. Clear your browser data and the entries disappear with it.</p>
+    </details>
+  </div>
+</section>
+
+<footer class="border-t border-edge/60 py-6 text-center text-xs text-slate-600">
+  SubScout — know what your subscriptions really cost.
+</footer>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "How does the subscription audit calculator decide Keep, Kill, or Maybe?", "acceptedAnswer": { "@type": "Answer", "text": "Each subscription is scored 0–100 from usage frequency, monthly price tier, and cost-per-use. Scores of 65+ earn Keep, 40–64 earn Maybe, and below 40 earn Kill, with the reasoning shown for every verdict." } },
+    { "@type": "Question", "name": "How do I figure out how much I spend on subscriptions per year?", "acceptedAnswer": { "@type": "Answer", "text": "Add every recurring charge with its billing cycle. The tool normalizes weekly, monthly, quarterly, and yearly plans to yearly equivalents and totals them, revealing the true annual cost." } },
+    { "@type": "Question", "name": "Is annual billing always cheaper than monthly billing?", "acceptedAnswer": { "@type": "Answer", "text": "Not always. Many services discount annual plans 15–25%, but some price annual above the monthly-equivalent total. Compare both prices with the optimizer, and only switch firm Keep verdicts to annual." } },
+    { "@type": "Question", "name": "What is subscription price-hike creep, and why track it?", "acceptedAnswer": { "@type": "Answer", "text": "Price-hike creep is the slow rise of subscription prices through small periodic increases, often compounding at 8–12% per year. Logging each increase shows the total change and annualized rate so you can re-audit when value changes." } },
+    { "@type": "Question", "name": "How is the 5-year savings projection calculated?", "acceptedAnswer": { "@type": "Answer", "text": "Kill verdicts contribute 100% of yearly cost and Maybe verdicts 50%, with each future year grown by a 5% assumed price-hike rate, showing the true five-year value of cutting waste." } },
+    { "@type": "Question", "name": "Is my subscription data private? Where is it stored?", "acceptedAnswer": { "@type": "Answer", "text": "Everything stays in your browser's localStorage. There is no account, no server, and no tracking; .ics reminders are generated on-device." } }
+  ]
+}
+</script>
+
+<script id="v3-subscout-subscription-audit-lib">
+/* SubScout subscription-audit engine — PURE functions only.
+   No DOM, no window, no document, no localStorage, no navigator.
+   Top-level function declarations so the test harness can eval via new Function.
+   NOTE: must never contain the literal "</" + "script>" sequence. */
+
+function toNumber(v) {
+  if (v === null || v === undefined) return NaN;
+  var n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+  return isNaN(n) ? NaN : n;
+}
+
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+
+function isPos(n) {
+  return typeof n === 'number' && isFinite(n) && n > 0;
+}
+
+function clamp(n, lo, hi) {
+  if (n < lo) return lo;
+  if (n > hi) return hi;
+  return n;
+}
+
+/* fmtMoney(n, sym) -> "$12.50". sym defaults to '$'. */
+function fmtMoney(n, sym) {
+  sym = (sym === undefined || sym === null || sym === '') ? '$' : String(sym);
+  if (!isFinite(n)) return sym + '0.00';
+  return sym + round2(n).toFixed(2);
+}
+
+/* ---------------- billing cycles ---------------- */
+
+var SUB_CYCLES = {
+  weekly:    { label: 'Weekly',    perYear: 52 },
+  monthly:   { label: 'Monthly',   perYear: 12 },
+  quarterly: { label: 'Quarterly',  perYear: 4  },
+  yearly:    { label: 'Yearly',    perYear: 1  }
+};
+
+function normCycle(c) {
+  return String(c === undefined || c === null ? '' : c).trim().toLowerCase();
+}
+
+function validCycle(c) {
+  return !!SUB_CYCLES[normCycle(c)];
+}
+
+function cycleLabel(c) {
+  var k = normCycle(c);
+  return SUB_CYCLES[k] ? SUB_CYCLES[k].label : '';
+}
+
+/* monthlyCost(cost, cycle) -> per-month equivalent, rounded | null */
+function monthlyCost(cost, cycle) {
+  var n = toNumber(cost);
+  if (!isPos(n)) return null;
+  var k = normCycle(cycle);
+  if (!SUB_CYCLES[k]) return null;
+  return round2(n * SUB_CYCLES[k].perYear / 12);
+}
+
+/* yearlyCost(cost, cycle) -> per-year equivalent, rounded | null */
+function yearlyCost(cost, cycle) {
+  var n = toNumber(cost);
+  if (!isPos(n)) return null;
+  var k = normCycle(cycle);
+  if (!SUB_CYCLES[k]) return null;
+  return round2(n * SUB_CYCLES[k].perYear);
+}
+
+/* ---------------- subscription validation ---------------- */
+
+var USAGE_OPTIONS = ['daily', 'weekly', 'monthly', 'rarely'];
+
+var USES_PER_MONTH = {
+  daily: 30,
+  weekly: 4.33,
+  monthly: 1,
+  rarely: 0.25
+};
+
+function normUsage(u) {
+  return String(u === undefined || u === null ? '' : u).trim().toLowerCase();
+}
+
+/* validateSub(raw) -> { ok, errors[], sub } where sub = { name, cost, cycle, sym, usage, renewal } */
+function validateSub(raw) {
+  var errors = [];
+  raw = raw || {};
+  var name = String(raw.name === undefined || raw.name === null ? '' : raw.name).trim();
+  if (!name) errors.push('Subscription name is required.');
+  var cost = toNumber(raw.cost);
+  if (!isPos(cost)) errors.push('Cost must be a positive number.');
+  var cycle = normCycle(raw.cycle);
+  if (!SUB_CYCLES[cycle]) errors.push('Billing cycle must be weekly, monthly, quarterly or yearly.');
+  var usage = normUsage(raw.usage);
+  if (USAGE_OPTIONS.indexOf(usage) === -1) errors.push('Usage must be daily, weekly, monthly or rarely.');
+  var renewal = String(raw.renewal === undefined || raw.renewal === null ? '' : raw.renewal).trim();
+  if (renewal && !/^\d{4}-\d{2}-\d{2}$/.test(renewal)) errors.push('Renewal date must be YYYY-MM-DD.');
+  var sym = String(raw.sym === undefined || raw.sym === null || raw.sym === '' ? '$' : raw.sym);
+  var ok = errors.length === 0;
+  return {
+    ok: ok,
+    errors: errors,
+    sub: ok ? {
+      name: name,
+      cost: round2(cost),
+      cycle: cycle,
+      sym: sym,
+      usage: usage,
+      renewal: renewal
+    } : null
+  };
+}
+
+/* enrichSub(sub) -> sub + { monthly, yearly } | null */
+function enrichSub(sub) {
+  if (!sub) return null;
+  var m = monthlyCost(sub.cost, sub.cycle);
+  var y = yearlyCost(sub.cost, sub.cycle);
+  if (m === null || y === null) return null;
+  var out = {};
+  for (var k in sub) { if (Object.prototype.hasOwnProperty.call(sub, k)) out[k] = sub[k]; }
+  out.monthly = m;
+  out.yearly = y;
+  return out;
+}
+
+/* ---------------- verdicts: Keep / Maybe / Kill ---------------- */
+
+/* scoreSub(sub, usage) -> { score 0..100, valuePerUse, reasons[] } */
+function scoreSub(sub, usage) {
+  var reasons = [];
+  var u = normUsage(usage);
+  if (USAGE_OPTIONS.indexOf(u) === -1) u = 'rarely';
+  var monthly = monthlyCost(sub.cost, sub.cycle);
+  if (monthly === null) return { score: 0, valuePerUse: Infinity, reasons: ['Invalid cost or cycle.'] };
+  var uses = USES_PER_MONTH[u];
+  var vpu = uses > 0 ? monthly / uses : Infinity;
+
+  var base = { daily: 92, weekly: 68, monthly: 42, rarely: 12 }[u];
+  reasons.push('Used ' + u + ' (' + uses + 'x/month).');
+
+  var costPenalty = 0;
+  if (monthly > 50) { costPenalty = 25; reasons.push('High price: ' + monthly + '/month.'); }
+  else if (monthly > 25) { costPenalty = 15; reasons.push('Pricey: ' + monthly + '/month.'); }
+  else if (monthly > 10) { costPenalty = 7; reasons.push('Moderate price: ' + monthly + '/month.'); }
+
+  var vpuPenalty = 0;
+  if (vpu > 10) { vpuPenalty = 20; reasons.push('Poor value: about ' + round2(vpu) + ' per use.'); }
+  else if (vpu > 5) { vpuPenalty = 12; reasons.push('Mediocre value: about ' + round2(vpu) + ' per use.'); }
+  else if (vpu > 2) { vpuPenalty = 6; reasons.push('Cost per use: about ' + round2(vpu) + '.'); }
+  else reasons.push('Good value: about ' + round2(vpu) + ' per use.');
+
+  var score = clamp(Math.round(base - costPenalty - vpuPenalty), 0, 100);
+  return { score: score, valuePerUse: round2(vpu), reasons: reasons };
+}
+
+/* verdictFor(sub, usage) -> { verdict: 'Keep'|'Maybe'|'Kill', score, valuePerUse, reasons[] } */
+function verdictFor(sub, usage) {
+  var s = scoreSub(sub, usage);
+  var verdict = s.score >= 65 ? 'Keep' : (s.score >= 40 ? 'Maybe' : 'Kill');
+  return { verdict: verdict, score: s.score, valuePerUse: s.valuePerUse, reasons: s.reasons };
+}
+
+/* auditSubs(subs) -> { items: [{...sub, monthly, yearly, verdict, score, valuePerUse, reasons}], totals } */
+function auditSubs(subs) {
+  var items = [];
+  (subs || []).forEach(function (raw) {
+    var sub = enrichSub(raw);
+    if (!sub) return;
+    var v = verdictFor(sub, sub.usage);
+    items.push({
+      name: sub.name, cost: sub.cost, cycle: sub.cycle, sym: sub.sym,
+      usage: sub.usage, renewal: sub.renewal,
+      monthly: sub.monthly, yearly: sub.yearly,
+      verdict: v.verdict, score: v.score,
+      valuePerUse: v.valuePerUse, reasons: v.reasons
+    });
+  });
+  var totals = { count: items.length, monthly: 0, yearly: 0, keep: 0, maybe: 0, kill: 0 };
+  items.forEach(function (it) {
+    totals.monthly = round2(totals.monthly + it.monthly);
+    totals.yearly = round2(totals.yearly + it.yearly);
+    if (it.verdict === 'Keep') totals.keep++;
+    else if (it.verdict === 'Maybe') totals.maybe++;
+    else totals.kill++;
+  });
+  return { items: items, totals: totals };
+}
+
+/* healthScore(auditedItems) -> { score 0..100, grade 'A'..'F', breakdown } | null (empty list) */
+function healthScore(items) {
+  items = items || [];
+  if (items.length === 0) return null;
+  var total = 0, killSpend = 0, maybeSpend = 0;
+  items.forEach(function (it) {
+    total += it.monthly;
+    if (it.verdict === 'Kill') killSpend += it.monthly;
+    else if (it.verdict === 'Maybe') maybeSpend += it.monthly;
+  });
+  var killShare = total > 0 ? killSpend / total : 0;
+  var maybeShare = total > 0 ? maybeSpend / total : 0;
+  var countPenalty = clamp((items.length - 3) * 3, 0, 15);
+  var score = clamp(Math.round(100 - killShare * 55 - maybeShare * 20 - countPenalty), 0, 100);
+  var grade = score >= 85 ? 'A' : score >= 70 ? 'B' : score >= 55 ? 'C' : score >= 40 ? 'D' : 'F';
+  return {
+    score: score,
+    grade: grade,
+    breakdown: {
+      killShare: round2(killShare * 100),
+      maybeShare: round2(maybeShare * 100),
+      countPenalty: round2(countPenalty)
+    }
+  };
+}
+
+/* ---------------- 5-year savings projection ---------------- */
+
+/* savingsProjection(items, years, hikePct) ->
+   { years, hikePct, killYearly, maybeYearly, annualSaving, perYear[], total }
+   Kill items save 100% of yearly cost; Maybe items save 50% (conservative). */
+function savingsProjection(items, years, hikePct) {
+  years = Math.floor(toNumber(years));
+  if (!isFinite(years) || years < 1) years = 5;
+  hikePct = toNumber(hikePct);
+  if (!isFinite(hikePct) || hikePct < 0) hikePct = 0.05;
+  var killYearly = 0, maybeYearly = 0;
+  (items || []).forEach(function (it) {
+    var y = toNumber(it.yearly);
+    if (!isPos(y)) return;
+    if (it.verdict === 'Kill') killYearly = round2(killYearly + y);
+    else if (it.verdict === 'Maybe') maybeYearly = round2(maybeYearly + y);
+  });
+  var annualSaving = round2(killYearly + maybeYearly * 0.5);
+  var perYear = [];
+  for (var i = 0; i < years; i++) {
+    perYear.push(round2(annualSaving * Math.pow(1 + hikePct, i)));
+  }
+  var total = round2(perYear.reduce(function (a, b) { return a + b; }, 0));
+  return {
+    years: years,
+    hikePct: hikePct,
+    killYearly: killYearly,
+    maybeYearly: maybeYearly,
+    annualSaving: annualSaving,
+    perYear: perYear,
+    total: total
+  };
+}
+
+/* ---------------- annual-vs-monthly billing optimizer ---------------- */
+
+/* billingOptimizer(monthlyPrice, annualPrice) ->
+   { ok, monthlyYearly, annual, savings, savingsPct, recommendation, errors[] } */
+function billingOptimizer(monthlyPrice, annualPrice) {
+  var errors = [];
+  var m = toNumber(monthlyPrice);
+  var a = toNumber(annualPrice);
+  if (!isPos(m)) errors.push('Monthly price must be a positive number.');
+  if (!isPos(a)) errors.push('Annual price must be a positive number.');
+  if (errors.length) return { ok: false, errors: errors };
+  var monthlyYearly = round2(m * 12);
+  var annual = round2(a);
+  var savings = round2(monthlyYearly - annual);
+  var pct = monthlyYearly > 0 ? round2(savings / monthlyYearly * 100) : 0;
+  var recommendation;
+  if (savings > 0) recommendation = 'Switch to annual billing and save ' + fmtMoney(savings) + '/year (' + pct + '% cheaper than monthly).';
+  else if (savings < 0) recommendation = 'Stay on monthly billing — the "annual plan" actually costs ' + fmtMoney(-savings) + ' more per year.';
+  else recommendation = 'Both cycles cost the same per year — pick whichever is easier to cancel.';
+  return {
+    ok: true, errors: [],
+    monthlyYearly: monthlyYearly, annual: annual,
+    savings: savings, savingsPct: pct, recommendation: recommendation
+  };
+}
+
+/* ---------------- price-hike creep log ---------------- */
+
+/* creepStats(entries) -> null if <2 valid entries, else
+   { count, first, last, changeAbs, changePct, months, annualizedPct, points[] }
+   points: [{ x: 0..1, y: 0..1 }] for sparkline drawing. */
+function creepStats(entries) {
+  var valid = (entries || []).map(function (e) {
+    var p = toNumber(e && e.price);
+    var d = e && e.date ? String(e.date) : '';
+    if (!isPos(p) || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+    return { name: String(e.name || ''), date: d, price: p };
+  }).filter(Boolean);
+  valid.sort(function (a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+  if (valid.length < 2) return null;
+  var first = valid[0], last = valid[valid.length - 1];
+  var changeAbs = round2(last.price - first.price);
+  var changePct = first.price > 0 ? round2(changeAbs / first.price * 100) : 0;
+  var d0 = new Date(first.date + 'T00:00:00Z').getTime();
+  var d1 = new Date(last.date + 'T00:00:00Z').getTime();
+  var months = Math.max(1, Math.round((d1 - d0) / (30.44 * 86400000)));
+  var annualized = first.price > 0 ? round2((Math.pow(last.price / first.price, 12 / months) - 1) * 100) : 0;
+  var prices = valid.map(function (v) { return v.price; });
+  var min = Math.min.apply(null, prices), max = Math.max.apply(null, prices);
+  var span = max - min;
+  var points = valid.map(function (v, i) {
+    return {
+      x: valid.length === 1 ? 0 : round2(i / (valid.length - 1)),
+      y: span > 0 ? round2((v.price - min) / span) : 0.5
+    };
+  });
+  return {
+    count: valid.length, first: first, last: last,
+    changeAbs: changeAbs, changePct: changePct,
+    months: months, annualizedPct: annualized,
+    entries: valid, points: points
+  };
+}
+
+/* ---------------- renewal dates + .ics reminders ---------------- */
+
+/* nextRenewal(fromISO, cycle) -> 'YYYY-MM-DD' | null */
+function nextRenewal(fromISO, cycle) {
+  var k = normCycle(cycle);
+  if (!SUB_CYCLES[k]) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fromISO || ''))) return null;
+  var d = new Date(String(fromISO) + 'T00:00:00Z');
+  if (isNaN(d.getTime())) return null;
+  var nd = new Date(d.getTime());
+  if (k === 'weekly') nd.setUTCDate(nd.getUTCDate() + 7);
+  else if (k === 'monthly') nd.setUTCMonth(nd.getUTCMonth() + 1);
+  else if (k === 'quarterly') nd.setUTCMonth(nd.getUTCMonth() + 3);
+  else nd.setUTCFullYear(nd.getUTCFullYear() + 1);
+  var mm = String(nd.getUTCMonth() + 1), dd = String(nd.getUTCDate());
+  return nd.getUTCFullYear() + '-' + (mm.length < 2 ? '0' + mm : mm) + '-' + (dd.length < 2 ? '0' + dd : dd);
+}
+
+function escapeICSText(s) {
+  return String((s === undefined || s === null) ? '' : s)
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
+}
+
+function icsDate(iso) {
+  return iso.replace(/-/g, '');
+}
+
+function icsUID(name, iso) {
+  return 'subscout-' + String(name || 'sub').toLowerCase().replace(/[^a-z0-9]+/g, '-') +
+    '-' + icsDate(iso || '0000-00-00') + '@subscout';
+}
+
+function icsRRule(cycle) {
+  var k = normCycle(cycle);
+  if (k === 'weekly') return 'FREQ=WEEKLY';
+  if (k === 'monthly') return 'FREQ=MONTHLY';
+  if (k === 'quarterly') return 'FREQ=MONTHLY;INTERVAL=3';
+  if (k === 'yearly') return 'FREQ=YEARLY';
+  return 'FREQ=MONTHLY';
+}
+
+/* buildICS(sub, dtstamp) -> ICS file text for the renewal reminder.
+   sub: { name, cost, cycle, sym, renewal ('YYYY-MM-DD') }. Pure. */
+function buildICS(sub, dtstamp) {
+  sub = sub || {};
+  var name = String(sub.name || 'Subscription');
+  var renewal = /^\d{4}-\d{2}-\d{2}$/.test(String(sub.renewal || '')) ? String(sub.renewal) : null;
+  var cyc = normCycle(sub.cycle);
+  if (!renewal || !SUB_CYCLES[cyc]) return null;
+  var sym = sub.sym === undefined || sub.sym === null || sub.sym === '' ? '$' : String(sub.sym);
+  var cost = toNumber(sub.cost);
+  var costStr = isPos(cost) ? fmtMoney(cost, sym) : '?';
+  var stamp = /^\d{8}T\d{6}Z$/.test(String(dtstamp || '')) ? String(dtstamp) : '20261004T000000Z';
+  var lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//SubScout//Subscription Audit//EN',
+    'BEGIN:VEVENT',
+    'UID:' + icsUID(name, renewal),
+    'DTSTAMP:' + stamp,
+    'DTSTART;VALUE=DATE:' + icsDate(renewal),
+    'RRULE:' + icsRRule(cyc),
+    'SUMMARY:' + escapeICSText(name + ' renews (' + costStr + ' ' + cycleLabel(cyc) + ')'),
+    'DESCRIPTION:' + escapeICSText('Reminder: your ' + name + ' subscription renews today at ' + costStr + ' per ' + cyc + '. Review it in your subscription audit.'),
+    'BEGIN:VALARM',
+    'TRIGGER:-P1D',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:' + escapeICSText(name + ' renews tomorrow'),
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ];
+  return lines.join('\r\n') + '\r\n';
+}
+
+</script>
+
+<script>
+/* SubScout UI — DOM wiring only. All math lives in the lib block above. */
+(function () {
+  'use strict';
+  var LS_SUBS = 'subscout-v3-subs';
+  var LS_CREEP = 'subscout-v3-creep';
+
+  function $(id) { return document.getElementById(id); }
+  function load(k, fb) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } }
+  function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function esc(s) { return String(s === undefined || s === null ? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  var subs = load(LS_SUBS, []);
+  var creep = load(LS_CREEP, []);
+
+  /* ---------- main render ---------- */
+  function render() {
+    var audit = auditSubs(subs);
+    var t = audit.totals;
+    var sym = subs.length ? subs[0].sym : '$';
+    $('stat-monthly').textContent = fmtMoney(t.monthly, sym);
+    $('stat-yearly').textContent = fmtMoney(t.yearly, sym);
+    $('stat-count').textContent = t.count;
+
+    var proj = savingsProjection(audit.items, 5, 0.05);
+    $('savings-5yr').textContent = fmtMoney(proj.total, sym);
+
+    var h = healthScore(audit.items);
+    if (!h) {
+      $('health-score').textContent = '–';
+      $('health-grade').textContent = 'add subs';
+      $('health-note').textContent = 'Add your subscriptions to get a 0–100 health score.';
+      $('health-detail').textContent = '';
+      $('health-bar').style.width = '0%';
+      $('health-ring').style.strokeDashoffset = 326.7;
+    } else {
+      $('health-score').textContent = h.score;
+      $('health-grade').textContent = 'Grade ' + h.grade;
+      $('health-note').textContent = h.score >= 70 ? 'Solid stack — most of your spend goes to services you use.'
+        : h.score >= 40 ? 'Leaky stack — Kill verdicts are draining your budget.'
+        : 'Bleeding money — cancel the Kill verdicts now.';
+      $('health-detail').textContent = h.breakdown.killShare + '% of spend is Kill · ' + h.breakdown.maybeShare + '% is Maybe';
+      $('health-bar').style.width = h.score + '%';
+      $('health-ring').style.strokeDashoffset = (326.7 * (1 - h.score / 100)).toFixed(1);
+    }
+
+    var list = $('subs-list');
+    var empty = $('subs-empty');
+    if (!audit.items.length) {
+      if (empty) empty.style.display = '';
+      Array.prototype.forEach.call(list.querySelectorAll('.sub-card'), function (c) { c.remove(); });
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    Array.prototype.forEach.call(list.querySelectorAll('.sub-card'), function (c) { c.remove(); });
+    audit.items.forEach(function (it, idx) {
+      var card = document.createElement('div');
+      card.className = 'sub-card glass rounded-2xl p-5 verdict-' + it.verdict;
+      var reasons = it.reasons.map(function (r) { return '<li class="text-xs text-slate-500">• ' + esc(r) + '</li>'; }).join('');
+      var renewalLine = it.renewal
+        ? '<div class="text-xs text-slate-500 mt-2">Renews: <span class="text-slate-300">' + esc(it.renewal) + '</span></div>'
+        : '';
+      card.innerHTML =
+        '<div class="flex items-start justify-between gap-2 mb-2">' +
+          '<div><div class="font-semibold text-slate-100">' + esc(it.name) + '</div>' +
+          '<div class="text-xs text-slate-500">' + esc(fmtMoney(it.cost, it.sym)) + ' / ' + esc(cycleLabel(it.cycle)) + ' · ' + esc(it.usage) + ' use</div></div>' +
+          '<span class="badge-' + it.verdict + ' rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide">' + it.verdict + '</span>' +
+        '</div>' +
+        '<div class="flex items-baseline gap-3 mb-2">' +
+          '<span class="text-xl font-bold" style="color:#22D3EE">' + esc(fmtMoney(it.monthly, it.sym)) + '</span>' +
+          '<span class="text-xs text-slate-500">/month · ' + esc(fmtMoney(it.yearly, it.sym)) + '/year</span>' +
+        '</div>' +
+        '<div class="score-track h-2 rounded-full overflow-hidden mb-1"><div class="h-full rounded-full" style="width:' + it.score + '%;background:' +
+          (it.verdict === 'Keep' ? '#22D3EE' : it.verdict === 'Maybe' ? '#F472B6' : '#EF4444') + '"></div></div>' +
+        '<div class="text-xs text-slate-400 mb-1">Score ' + it.score + '/100 · ~' + esc(fmtMoney(it.valuePerUse, it.sym)) + ' per use</div>' +
+        '<ul class="mt-1 space-y-0.5">' + reasons + '</ul>' +
+        renewalLine +
+        '<div class="flex gap-2 mt-3">' +
+          (it.renewal ? '<button data-ics="' + idx + '" class="text-xs px-3 py-1.5 rounded-lg border border-edge text-slate-300 hover:border-cyanx hover:text-cyanx transition">Download .ics reminder</button>' : '') +
+          '<button data-del="' + idx + '" class="text-xs px-3 py-1.5 rounded-lg border border-edge text-slate-500 hover:border-red-400 hover:text-red-400 transition">Remove</button>' +
+        '</div>';
+      list.appendChild(card);
+    });
+  }
+
+  /* ---------- add subscription ---------- */
+  $('add-sub-btn').addEventListener('click', function () {
+    var res = validateSub({
+      name: $('sub-name').value,
+      cost: $('sub-cost').value,
+      cycle: $('sub-cycle').value,
+      sym: $('sub-sym').value,
+      usage: $('sub-usage').value,
+      renewal: $('sub-renewal').value
+    });
+    var err = $('form-error');
+    if (!res.ok) { err.textContent = res.errors.join(' '); err.classList.remove('hidden'); return; }
+    err.classList.add('hidden');
+    subs.push(res.sub);
+    save(LS_SUBS, subs);
+    $('sub-name').value = ''; $('sub-cost').value = ''; $('sub-renewal').value = '';
+    render();
+  });
+
+  $('sample-btn').addEventListener('click', function () {
+    if (!subs.length) {
+      subs = [
+        { name: 'StreamFlix', cost: 15.49, cycle: 'monthly', sym: '$', usage: 'weekly', renewal: '2026-11-04' },
+        { name: 'CloudVault Pro', cost: 119.99, cycle: 'yearly', sym: '$', usage: 'daily', renewal: '2027-03-19' },
+        { name: 'GymBuddy App', cost: 9.99, cycle: 'monthly', sym: '$', usage: 'rarely', renewal: '2026-10-15' }
+      ];
+      save(LS_SUBS, subs);
+      render();
+    }
+  });
+
+  /* ---------- card buttons (delegate) ---------- */
+  $('subs-list').addEventListener('click', function (e) {
+    var del = e.target.getAttribute && e.target.getAttribute('data-del');
+    var ics = e.target.getAttribute && e.target.getAttribute('data-ics');
+    if (del !== null && del !== undefined && del !== '') {
+      subs.splice(parseInt(del, 10), 1);
+      save(LS_SUBS, subs);
+      render();
+    } else if (ics !== null && ics !== undefined && ics !== '') {
+      var sub = subs[parseInt(ics, 10)];
+      var stamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      var text = buildICS(sub, stamp);
+      if (!text) return;
+      var blob = new Blob([text], { type: 'text/calendar' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = sub.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-renewal.ics';
+      document.body.appendChild(a); a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    }
+  });
+
+  /* ---------- billing optimizer ---------- */
+  $('opt-run').addEventListener('click', function () {
+    var box = $('optimizer-result');
+    var r = billingOptimizer($('opt-monthly').value, $('opt-annual').value);
+    box.classList.remove('hidden');
+    if (!r.ok) {
+      box.innerHTML = '<p class="text-red-400 text-xs">' + esc(r.errors.join(' ')) + '</p>';
+      return;
+    }
+    var name = esc($('opt-name').value.trim() || 'This service');
+    var good = r.savings > 0;
+    box.innerHTML =
+      '<div class="grid grid-cols-2 gap-3 mb-3 text-center">' +
+        '<div class="rounded-lg bg-card p-3"><div class="text-[11px] text-slate-500 uppercase tracking-wide mb-1">Monthly × 12</div><div class="font-bold text-lg">' + esc(fmtMoney(r.monthlyYearly)) + '</div></div>' +
+        '<div class="rounded-lg bg-card p-3"><div class="text-[11px] text-slate-500 uppercase tracking-wide mb-1">Annual plan</div><div class="font-bold text-lg">' + esc(fmtMoney(r.annual)) + '</div></div>' +
+      '</div>' +
+      '<p class="' + (good ? 'text-emerald-400' : 'text-slate-300') + ' font-semibold">' + name + ': ' + esc(r.recommendation) + '</p>';
+  });
+
+  /* ---------- creep log ---------- */
+  function renderCreep() {
+    var stats = creepStats(creep);
+    var chart = $('creep-chart');
+    var NS = 'http://www.w3.org/2000/svg';
+    while (chart.firstChild) chart.removeChild(chart.firstChild);
+    if (stats && stats.points.length >= 2) {
+      var pts = stats.points.map(function (p) {
+        return (10 + p.x * 280).toFixed(1) + ',' + (78 - p.y * 64).toFixed(1);
+      }).join(' ');
+      var poly = document.createElementNS(NS, 'polyline');
+      poly.setAttribute('points', pts);
+      poly.setAttribute('fill', 'none');
+      poly.setAttribute('stroke', '#F472B6');
+      poly.setAttribute('stroke-width', '2.5');
+      poly.setAttribute('stroke-linecap', 'round');
+      chart.appendChild(poly);
+      stats.points.forEach(function (p) {
+        var c = document.createElementNS(NS, 'circle');
+        c.setAttribute('cx', (10 + p.x * 280).toFixed(1));
+        c.setAttribute('cy', (78 - p.y * 64).toFixed(1));
+        c.setAttribute('r', '3.5');
+        c.setAttribute('fill', '#22D3EE');
+        chart.appendChild(c);
+      });
+      var arrow = stats.changeAbs >= 0 ? '▲' : '▼';
+      var cls = stats.changeAbs >= 0 ? 'text-pinkx' : 'text-emerald-400';
+      $('creep-stats').innerHTML = '<span class="' + cls + ' font-semibold">' + arrow + ' ' +
+        esc(fmtMoney(Math.abs(stats.changeAbs))) + ' (' + (stats.changePct >= 0 ? '+' : '') + stats.changePct + '%)</span>' +
+        ' across ' + stats.count + ' logged prices · ~' + stats.annualizedPct + '%/year creep over ' + stats.months + ' months.';
+    } else {
+      $('creep-stats').textContent = 'Log at least two prices to see the creep.';
+    }
+    var ul = $('creep-list');
+    ul.innerHTML = '';
+    creep.slice().reverse().forEach(function (e, ri) {
+      var li = document.createElement('li');
+      li.className = 'flex items-center justify-between rounded-lg border border-edge bg-ink/40 px-3 py-1.5';
+      var idx = creep.length - 1 - ri;
+      li.innerHTML = '<span><span class="text-slate-200">' + esc(e.name || 'Service') + '</span> · ' + esc(e.date) + ' · <span class="text-slate-200">' + esc(fmtMoney(toNumber(e.price))) + '</span></span>' +
+        '<button data-creep-del="' + idx + '" class="text-slate-600 hover:text-red-400">✕</button>';
+      ul.appendChild(li);
+    });
+  }
+
+  $('creep-add').addEventListener('click', function () {
+    var name = $('creep-name').value.trim();
+    var date = $('creep-date').value;
+    var price = toNumber($('creep-price').value);
+    if (!isPos(price) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      $('creep-stats').textContent = 'Enter a valid date and a positive price to log.';
+      return;
+    }
+    creep.push({ name: name, date: date, price: round2(price) });
+    save(LS_CREEP, creep);
+    $('creep-price').value = '';
+    renderCreep();
+  });
+
+  $('creep-list').addEventListener('click', function (e) {
+    var d = e.target.getAttribute && e.target.getAttribute('data-creep-del');
+    if (d !== null && d !== undefined && d !== '') {
+      creep.splice(parseInt(d, 10), 1);
+      save(LS_CREEP, creep);
+      renderCreep();
+    }
+  });
+
+  render();
+  renderCreep();
+})();
+</script>
+</body>
+</html>
